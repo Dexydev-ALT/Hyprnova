@@ -1,0 +1,34 @@
+SENTCAN1
+serial=1791709700002
+pathlen=60
+/home/user/.canaries/invoice_2024_Q0003_finance_summary.xlsx
+mac=0000000000000000000000000000000000000000000000000000000000000000
+created=1791709700
+-----
+# Internal record -- do not modify.
+# generated_by=hyprnova canary_serial=1791709700002
+invoice_id,customer,amount,currency,due_date,status,owner,department
+INV-376391,ACME Holdings Ltd,4779.52,USD,2024-04-15,overdue,j.smith,sales
+INV-939316,ACME Holdings Ltd,4566.78,USD,2024-07-15,draft,j.smith,engineering
+INV-658713,ACME Holdings Ltd,1083.33,USD,2024-11-15,overdue,j.smith,operations
+INV-952043,ACME Holdings Ltd,3298.52,USD,2024-10-15,pending,j.smith,finance
+INV-534288,ACME Holdings Ltd,889.79,USD,2024-03-15,paid,j.smith,finance
+INV-206622,ACME Holdings Ltd,3188.35,USD,2024-05-15,paid,j.smith,legal
+INV-291187,ACME Holdings Ltd,2512.16,USD,2024-07-15,overdue,j.smith,legal
+INV-534308,ACME Holdings Ltd,3446.10,USD,2024-06-15,draft,j.smith,finance
+INV-670596,ACME Holdings Ltd,3253.69,USD,2024-02-15,overdue,j.smith,finance
+INV-108333,ACME Holdings Ltd,3098.47,USD,2024-01-15,pending,j.smith,finance
+INV-565458,ACME Holdings Ltd,1879.38,USD,2024-02-15,paid,j.smith,engineering
+INV-152738,ACME Holdings Ltd,1367.98,USD,2024-05-15,paid,j.smith,engineering
+INV-369293,ACME Holdings Ltd,4367.97,USD,2024-08-15,overdue,j.smith,operations
+INV-297098,ACME Holdings Ltd,4588.57,USD,2024-02-15,pending,j.smith,finance
+INV-778578,ACME Holdings Ltd,444.25,USD,2024-04-15,draft,j.smith,engineering
+INV-522716,ACME Holdings Ltd,2296.89,USD,2024-06-15,paid,j.smith,finance
+INV-267285,ACME Holdings Ltd,4390.93,USD,2024-10-15,pending,j.smith,operations
+INV-944134,ACME Holdings Ltd,3411.19,USD,2024-07-15,draft,j.smith,operations
+INV-521191,ACME Holdings Ltd,1155.12,USD,2024-10-15,pending,j.smith,sales
+INV-680707,ACME Holdings Ltd,4583.92,USD,2024-05-15,paid,j.smith,finance
+INV-538979,ACME Holdings Ltd,967.81,USD,2024-08-15,overdue,j.smith,legal
+INV-555114,ACME Holdings Ltd,3189.00,USD,2024-02-15,draft,j.smith,engineering
+INV-386737,ACME Holdings Ltd,2213.39,USD,2024-06-15,overdue,j.smith,engineering
+INV-401591,ACME Holdings Ltd,4256.37,USD,2024-06-15,draft,j.smith,legal

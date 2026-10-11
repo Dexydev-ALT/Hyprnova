@@ -1,0 +1,53 @@
+SENTCAN1
+serial=1791709700001
+pathlen=60
+/home/user/.canaries/.invoice_2024_Q0002_finance_summary.pdf
+mac=0000000000000000000000000000000000000000000000000000000000000000
+created=1791709700
+-----
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R >>
+endobj
+4 0 obj
+<< /Length 1977 >>
+stream
+BT /F1 10 Tf 40 700 Td (# Internal record -- do not modify.
+# generated_by=hyprnova canary_serial=1791709700001
+invoice_id,customer,amount,currency,due_date,status,owner,department
+INV-208766,ACME Holdings Ltd,1395.52,USD,2024-03-15,draft,j.smith,finance
+INV-367917,ACME Holdings Ltd,4826.90,USD,2024-07-15,pending,j.smith,sales
+INV-316720,ACME Holdings Ltd,3621.41,USD,2024-03-15,paid,j.smith,sales
+INV-102960,ACME Holdings Ltd,842.61,USD,2024-12-15,draft,j.smith,sales
+INV-431293,ACME Holdings Ltd,4446.93,USD,2024-12-15,overdue,j.smith,finance
+INV-305387,ACME Holdings Ltd,4251.46,USD,2024-12-15,draft,j.smith,sales
+INV-467381,ACME Holdings Ltd,4689.16,USD,2024-06-15,draft,j.smith,sales
+INV-634043,ACME Holdings Ltd,547.49,USD,2024-05-15,overdue,j.smith,operations
+INV-725812,ACME Holdings Ltd,1054.64,USD,2024-08-15,draft,j.smith,legal
+INV-985376,ACME Holdings Ltd,3999.67,USD,2024-01-15,paid,j.smith,finance
+INV-998124,ACME Holdings Ltd,2885.87,USD,2024-11-15,draft,j.smith,finance
+INV-442289,ACME Holdings Ltd,1735.87,USD,2024-04-15,draft,j.smith,legal
+INV-461711,ACME Holdings Ltd,2724.65,USD,2024-01-15,overdue,j.smith,operations
+INV-594466,ACME Holdings Ltd,715.24,USD,2024-06-15,overdue,j.smith,operations
+INV-502786,ACME Holdings Ltd,241.87,USD,2024-12-15,paid,j.smith,engineering
+INV-325146,ACME Holdings Ltd,2789.56,USD,2024-09-15,paid,j.smith,engineering
+INV-238156,ACME Holdings Ltd,1069.96,USD,2024-05-15,paid,j.smith,sales
+INV-140994,ACME Holdings Ltd,609.86,USD,2024-06-15,overdue,j.smith,sales
+INV-365798,ACME Holdings Ltd,2429.01,USD,2024-02-15,paid,j.smith,operations
+INV-954535,ACME Holdings Ltd,2462.27,USD,2024-03-15,overdue,j.smith,sales
+INV-365428,ACME Holdings Ltd,1569.48,USD,2024-10-15,paid,j.smith,sales
+INV-239927,ACME Holdings Ltd,894.59,USD,2024-02-15,draft,j.smith,finance
+INV-195726,ACME Holdings Ltd,738.27,USD,2024-12-15,draft,j.smith,engineering
+INV-776012,ACME Holdings Ltd,1205.73,USD,2024-06-15,pending,j.smith,finance
+) Tj ET
+endstream
+endobj
+trailer
+<< /Size 5 /Root 1 0 R >>
+%%EOF

@@ -1,0 +1,34 @@
+SENTCAN1
+serial=1791709700003
+pathlen=60
+/home/user/.canaries/.invoice_2024_Q0004_finance_summary.odt
+mac=0000000000000000000000000000000000000000000000000000000000000000
+created=1791709700
+-----
+# Internal record -- do not modify.
+# generated_by=hyprnova canary_serial=1791709700003
+invoice_id,customer,amount,currency,due_date,status,owner,department
+INV-704775,ACME Holdings Ltd,4436.98,USD,2024-03-15,draft,j.smith,finance
+INV-491760,ACME Holdings Ltd,86.14,USD,2024-04-15,paid,j.smith,legal
+INV-620818,ACME Holdings Ltd,2278.43,USD,2024-02-15,overdue,j.smith,sales
+INV-432324,ACME Holdings Ltd,2998.18,USD,2024-12-15,overdue,j.smith,finance
+INV-485524,ACME Holdings Ltd,4631.92,USD,2024-01-15,draft,j.smith,sales
+INV-755167,ACME Holdings Ltd,1926.29,USD,2024-01-15,paid,j.smith,legal
+INV-913157,ACME Holdings Ltd,2640.90,USD,2024-03-15,paid,j.smith,finance
+INV-796225,ACME Holdings Ltd,1769.28,USD,2024-03-15,overdue,j.smith,engineering
+INV-344475,ACME Holdings Ltd,2189.13,USD,2024-09-15,draft,j.smith,legal
+INV-885660,ACME Holdings Ltd,3753.24,USD,2024-04-15,overdue,j.smith,finance
+INV-450346,ACME Holdings Ltd,303.66,USD,2024-12-15,draft,j.smith,legal
+INV-394992,ACME Holdings Ltd,4544.70,USD,2024-11-15,paid,j.smith,finance
+INV-363600,ACME Holdings Ltd,3642.04,USD,2024-09-15,paid,j.smith,sales
+INV-641685,ACME Holdings Ltd,3741.12,USD,2024-08-15,overdue,j.smith,operations
+INV-963115,ACME Holdings Ltd,1951.88,USD,2024-12-15,pending,j.smith,engineering
+INV-203802,ACME Holdings Ltd,4259.88,USD,2024-10-15,draft,j.smith,legal
+INV-429111,ACME Holdings Ltd,2952.95,USD,2024-04-15,overdue,j.smith,operations
+INV-405968,ACME Holdings Ltd,2538.96,USD,2024-10-15,overdue,j.smith,engineering
+INV-864869,ACME Holdings Ltd,2157.72,USD,2024-12-15,draft,j.smith,operations
+INV-296060,ACME Holdings Ltd,1196.31,USD,2024-07-15,overdue,j.smith,finance
+INV-376469,ACME Holdings Ltd,3697.21,USD,2024-12-15,overdue,j.smith,engineering
+INV-571795,ACME Holdings Ltd,3175.92,USD,2024-06-15,draft,j.smith,finance
+INV-513560,ACME Holdings Ltd,2607.63,USD,2024-12-15,pending,j.smith,operations
+INV-705216,ACME Holdings Ltd,3770.27,USD,2024-05-15,pending,j.smith,operations
