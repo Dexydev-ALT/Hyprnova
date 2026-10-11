@@ -1,0 +1,18 @@
+module components
+GlowDot 1.0 GlowDot.qml
+Panel 1.0 Panel.qml
+StatTile 1.0 StatTile.qml
+SevBadge 1.0 SevBadge.qml
+NovaButton 1.0 NovaButton.qml
+SectionTitle 1.0 SectionTitle.qml
+Sparkline 1.0 Sparkline.qml
+EmptyState 1.0 EmptyState.qml
+RiskBar 1.0 RiskBar.qml
+ProcessTree 1.0 ProcessTree.qml
+ToastStack 1.0 ToastStack.qml
+ThreatDialog 1.0 ThreatDialog.qml
+EventRow 1.0 EventRow.qml
+NavIcon 1.0 NavIcon.qml
+SearchBox 1.0 SearchBox.qml
+HeroShield 1.0 HeroShield.qml
+RecommendationCard 1.0 RecommendationCard.qml

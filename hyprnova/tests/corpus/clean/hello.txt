@@ -1,0 +1,3 @@
+Hello, world!
+This is a plain text file with no suspicious content at all.
+It exists so the corpus runner can prove clean files stay clean.

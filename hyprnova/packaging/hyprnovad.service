@@ -1,0 +1,52 @@
+# HyprNova Anti-Malware Sec -- agent daemon (systemd unit)
+# Install: cp packaging/hyprnovad.service /etc/systemd/system/ && systemctl daemon-reload
+# The unit is deliberately strict: the agent runs as root for fanotify/auditd/
+# cgroup/nftables, so every other escape hatch is closed.
+[Unit]
+Description=HyprNova Anti-Malware Sec agent (hyprnovad)
+Documentation=file:/usr/share/doc/hyprnova/README.md
+After=network-online.target local-fs.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/hyprnovad --config /etc/hyprnova/agent.json
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=on-failure
+RestartSec=5s
+TimeoutStopSec=30s
+
+# ---- sandboxing / hardening (deliberate, reviewed line by line) -----------
+# Root is REQUIRED for fanotify permission events, auditd netlink, cgroup
+# containment and nftables. Everything else that a root service can give up,
+# this unit takes away.
+NoNewPrivileges=yes
+LockPersonality=yes
+# W+X is never needed: Module 4c reads /proc/pid/mem; the scanner mmaps read-only.
+MemoryDenyWriteExecute=yes
+ProtectSystem=strict
+ProtectHome=read-only
+# PrivateTmp stays OFF on purpose: the agent must see the HOST /tmp to scan
+# it and to police payloads dropped there. A private /tmp would silently blind
+# exactly the sensors this daemon exists for.
+PrivateTmp=no
+# ProtectProc stays at the default on purpose: proc-poll and Module 4c read
+# /proc/<pid>/{stat,maps,mem} of OTHER users' processes; "invisible" would
+# hide them and degrade detection without any sensor failing loudly.
+ProtectProc=default
+ProtectKernelModules=yes
+ProtectKernelTunables=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+RestrictNamespaces=yes
+SystemCallArchitectures=native
+CapabilityBoundingSet=CAP_DAC_READ_SEARCH CAP_DAC_OVERRIDE CAP_SYS_PTRACE CAP_NET_ADMIN CAP_SYS_ADMIN CAP_AUDIT_READ CAP_AUDIT_CONTROL
+AmbientCapabilities=CAP_DAC_READ_SEARCH CAP_DAC_OVERRIDE CAP_SYS_PTRACE CAP_NET_ADMIN CAP_SYS_ADMIN CAP_AUDIT_READ CAP_AUDIT_CONTROL
+ReadWritePaths=/var/lib/hyprnova /var/log/hyprnova /run/hyprnova
+
+[Install]
+WantedBy=multi-user.target

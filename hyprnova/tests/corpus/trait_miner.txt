@@ -1,0 +1,3 @@
+== SYNTHETIC TRAIT FIXTURE (HyprNova corpus, not a real sample) ==
+Exec: xmrig --donate-level=1 -o stratum+tcp://pool.example.invalid:3333
+Algorithm: cryptonight; failsafe pool nicehash placeholder (documentation only).

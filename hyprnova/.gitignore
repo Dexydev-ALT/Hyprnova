@@ -1,0 +1,9 @@
+build/
+*.o
+*.dump
+hyprnovad
+hyprnova-cli
+hyprnova-tests
+tests/report.json
+packaging/deb/
+packaging/hyprnova_1.0.0_amd64.deb

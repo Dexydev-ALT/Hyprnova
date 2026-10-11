@@ -1,0 +1,5 @@
+== SYNTHETIC TRAIT FIXTURE (HyprNova corpus, not a real sample) ==
+Attention: all your files have been encrypted
+See README_RESTORE for payment instructions
+Run vssadmin delete shadows failed; shadow copies removed.
+Your recovery key costs bitcoin. Files renamed with .locked extension.

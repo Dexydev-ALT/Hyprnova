@@ -1,0 +1,4 @@
+== SYNTHETIC TRAIT FIXTURE (HyprNova corpus, not a real sample) ==
+static void hide_proc(pid_t p) { /* remove from proc enumerations */ }
+The LKM relocates sys_call_table entries and hooks init_module
+so reinsertion is denied while the backdoor stays resident.

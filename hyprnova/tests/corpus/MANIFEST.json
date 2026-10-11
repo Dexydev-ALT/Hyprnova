@@ -1,0 +1,55 @@
+{
+ "corpus": [
+  {
+   "path": "clean/config-like.txt",
+   "expect": "clean",
+   "trait": "benign"
+  },
+  {
+   "path": "clean/hello.txt",
+   "expect": "clean",
+   "trait": "benign"
+  },
+  {
+   "path": "clean/notes.md",
+   "expect": "clean",
+   "trait": "benign"
+  },
+  {
+   "path": "trait_c2.txt",
+   "expect": "malicious",
+   "trait": "c2"
+  },
+  {
+   "path": "trait_credential.txt",
+   "expect": "malicious",
+   "trait": "credential"
+  },
+  {
+   "path": "trait_lateral_ssh.txt",
+   "expect": "malicious",
+   "trait": "lateral_ssh"
+  },
+  {
+   "path": "trait_loader.txt",
+   "expect": "malicious",
+   "trait": "loader"
+  },
+  {
+   "path": "trait_miner.txt",
+   "expect": "malicious",
+   "trait": "miner"
+  },
+  {
+   "path": "trait_ransomware.txt",
+   "expect": "malicious",
+   "trait": "ransomware"
+  },
+  {
+   "path": "trait_rootkit.txt",
+   "expect": "malicious",
+   "trait": "rootkit"
+  }
+ ],
+ "note": "All fixtures are synthetic text written for HyprNova tests; no real malware, no EICAR (EICAR is never the detection test). Expected outcomes refer to the built-in yara-lite rule floor."
+}

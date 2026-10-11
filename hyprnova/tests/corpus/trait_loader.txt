@@ -1,0 +1,3 @@
+== SYNTHETIC TRAIT FIXTURE (HyprNova corpus, not a real sample) ==
+The staged loader mmaps a buffer, calls mprotect with PROT_EXEC,
+writes through /proc/self/mem and resolves __libc_start_main for the trampoline.

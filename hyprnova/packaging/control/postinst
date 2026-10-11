@@ -1,0 +1,20 @@
+#!/bin/sh
+# postinst: enable the agent; never clobber an existing operator config.
+set -e
+if [ "$1" = configure ]; then
+    if [ ! -f /etc/hyprnova/agent.json ]; then
+        install -d -m700 /etc/hyprnova /var/lib/hyprnova /var/lib/hyprnova/quarantine /var/lib/hyprnova/memory
+        /usr/bin/hyprnovad --dump-config > /etc/hyprnova/agent.json
+        chmod 600 /etc/hyprnova/agent.json
+    fi
+    if command -v systemctl >/dev/null 2>&1; then
+        systemctl daemon-reload || true
+        systemctl enable --now hyprnovad.service || echo "hyprnova: service not started -- enable manually" >&2
+    fi
+    # Operator group for the IPC socket (gui.ipc_group default "hyprnova").
+    # Idempotent; an absent group only degrades auth honestly (daemon logs it).
+    if ! getent group hyprnova >/dev/null 2>&1; then
+        groupadd --system hyprnova 2>/dev/null || addgroup --system hyprnova 2>/dev/null ||
+            echo "hyprnova: could not create the operator group; IPC stays root/same-uid" >&2
+    fi
+fi

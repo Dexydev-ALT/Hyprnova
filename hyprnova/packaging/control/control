@@ -1,0 +1,15 @@
+Package: hyprnova
+Version: 1.0.0
+Section: utils
+Priority: optional
+Architecture: amd64
+Maintainer: HyprNova <dev@hyprnova.local>
+Depends: libc6 (>= 2.31), libssl3 | libssl3t64
+Recommends: systemd
+Suggests: clamav, rkhunter, lynis, crowdsec
+Installed-Size: 40000
+Description: HyprNova Anti-Malware Sec -- endpoint agent, CLI and console
+ Behavioural EDR for Linux workstations and servers: ransomware containment
+ with evidence preservation, memory forensics (Module 4c), yara-lite + KVRT +
+ ClamAV scanning, package-integrity and sshd weak-settings audits, CrowdSec
+ integration, shadow-copy recovery lifeline, AI analyst (advises-only).

@@ -1,0 +1,5 @@
+# ordinary service configuration
+port = 8080
+log_level = info
+workers = 4
+cache_dir = /var/cache/example

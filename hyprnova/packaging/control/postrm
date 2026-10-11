@@ -1,0 +1,16 @@
+#!/bin/sh
+# postrm: on REMOVE keep everything; on PURGE archive recovery data before
+# deletion. Quarantine + snapshots are the operator's lifeline; we refuse to
+# destroy them silently even when dpkg says purge.
+set -e
+if [ "$1" = purge ]; then
+    if [ -d /var/lib/hyprnova ] && [ -n "$(ls -A /var/lib/hyprnova 2>/dev/null)" ]; then
+        ARC=/var/backups/hyprnova-state-$(date +%Y%m%d-%H%M%S).tar.gz
+        install -d -m700 /var/backups
+        tar -czf "$ARC" -C / var/lib/hyprnova 2>/dev/null || true
+        chmod 600 "$ARC" 2>/dev/null || true
+        echo "hyprnova: state (quarantine/snapshots/dumps) archived to $ARC"
+    fi
+    rm -rf /var/lib/hyprnova
+    # The conffile /etc/hyprnova/agent.json is removed by dpkg itself on purge.
+fi
