@@ -41,6 +41,12 @@ public:
         std::string type;          // file | dir | symlink | other
         std::uint64_t bytes{0};
         std::string note;          // e.g. "symlink -> /etc/passwd (link removed only)"
+        // Identity captured at PLAN time (the path was verified to be a regular
+        // file then). execute() re-checks it through an O_NOFOLLOW fd before
+        // any overwrite: a path swapped for a symlink (or replaced outright)
+        // after planning is refused, not followed — external finding.
+        std::uint64_t dev{0};
+        std::uint64_t ino{0};
     };
 
     struct Plan {

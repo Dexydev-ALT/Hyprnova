@@ -97,4 +97,17 @@ private:
     core::CarveConfig cfg_;
 };
 
+/// How many bytes of a CARVED span are actually present in the re-read blob.
+/// Inventory offsets come from one read; the file may shrink before the carve
+/// re-opens it. Returns 0 and sets ok=false when the span starts past the end
+/// (the old code underflowed `size - offset` here and hashed out of bounds);
+/// otherwise clamps to what is there and sets ok=true. Exposed for the
+/// stale-offset regression cases.
+[[nodiscard]] inline std::uint64_t carve_take(std::uint64_t span_offset, std::uint64_t span_size,
+                                              std::uint64_t blob_size, bool& ok) noexcept {
+    if (span_offset >= blob_size) { ok = false; return 0; }
+    ok = true;
+    return std::min<std::uint64_t>(span_size, blob_size - span_offset);
+}
+
 }  // namespace hyprnova::scanning

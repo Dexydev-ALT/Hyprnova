@@ -215,9 +215,22 @@ CarveReport Carver::carve_file(std::string_view path, std::string_view out_dir,
                                   a.span.size);
             continue;
         }
+        // The inventory came from the FIRST read; this blob is the SECOND. The
+        // file may have shrunk in between: refuse stale offsets instead of
+        // underflowing `size - offset` (which made `avail` huge and hashed out
+        // of bounds — external finding).
+        bool span_ok = false;
+        const std::uint64_t take = carve_take(a.span.offset, a.span.size, blob.size(), span_ok);
+        if (!span_ok) {
+            a.note += " [not extracted: file changed between inventory and carve; "
+                      "stale offset skipped safely]";
+            continue;
+        }
         const auto* begin = blob.data() + a.span.offset;
-        const std::uint64_t avail = blob.size() - a.span.offset;
-        const std::uint64_t take = std::min<std::uint64_t>(a.span.size, avail);
+        if (take < a.span.size) {
+            a.note += std::format(" [truncated at re-read: file shrank; {} of {} bytes]",
+                                  take, a.span.size);
+        }
         std::span<const std::byte> bytes(view.data() + a.span.offset, take);
 
         const auto dig = core::hash::Sha256::once(bytes);

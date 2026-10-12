@@ -13,6 +13,7 @@ itself (`hyprnova-tests` prints the totals; `tests/run_tests.sh` enforces them):
 | Suite | Cases |
 |---|---|
 | honeypot (decoy plant/watch/classify/E2E via real inotify events) | 29 |
+| sig (external findings 1–2: mixed-case nocase via folded pass; wide UTF-16LE routed+validated) | 5 |
 | config (validate/read/save round-trip, incl. rescue section) | 18 |
 | json (parse/malformed/bounds/ndjson) | 17 |
 | carver (file carving fixtures) | 17 |
@@ -30,7 +31,8 @@ itself (`hyprnova-tests` prints the totals; `tests/run_tests.sh` enforces them):
 | bench (harness shape; values never asserted) | 10 |
 | e2e (§8 drill: fixtures vs live monitor + response invariants) | 9 |
 | sameid (SensorId collision disambiguation; BUG #1 regression) | 4 |
-| **Total** | **248** (target 1,000 over time, never inflated) |
+| carver stale-offset guard + shred symlink-race + shadow loop limits (external findings 3–5) | 5 |
+| **Total** | **258** (target 1,000 over time, never inflated) |
 
 Honeypot E2E discipline: the read/modify/delete cases perform REAL file operations against
 planted decoys and wait for bus delivery of the resulting event — no atime manipulation

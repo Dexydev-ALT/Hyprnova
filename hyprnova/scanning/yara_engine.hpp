@@ -210,6 +210,12 @@ private:
     /// rule index -> (pattern index within rule -> automaton pattern id)
     std::vector<std::vector<std::size_t>> rule_to_ac_;
     AhoCorasick ac_;
+    /// True when any rule carries a nocase TEXT pattern: scan() then also runs
+    /// the automaton over a fully lowercased copy of the buffer so mixed-case
+    /// haystacks can still emit the hits the case-insensitive validator needs
+    /// (external finding: original/lower/upper needle variants alone miss
+    /// arbitrary mixed case).
+    bool fold_scan_{false};
     std::vector<ParseIssue> issues_;
     Backend backend_{Backend::YaraLite};
     struct Impl;

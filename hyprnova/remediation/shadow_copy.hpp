@@ -108,4 +108,15 @@ private:
     mutable std::mutex mu_;
 };
 
+/// Room (bytes) the snapshot copier may still take this iteration: the
+/// remaining per-file cap and the remaining aggregate budget, whichever is
+/// smaller; 0 stops the copy (marked truncated). Exposed for the external-
+/// finding regression cases (#5: limits are enforced in the loop, not just
+/// in the pre-copy size check).
+[[nodiscard]] inline std::uint64_t copy_room(std::uint64_t copied, std::uint64_t per_file_cap,
+                                             std::uint64_t budget) noexcept {
+    if (copied >= per_file_cap || copied >= budget) return 0;
+    return std::min<std::uint64_t>(per_file_cap - copied, budget - copied);
+}
+
 }  // namespace hyprnova::remediation

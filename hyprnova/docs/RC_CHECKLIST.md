@@ -9,7 +9,8 @@ reasoned NOT RUN — nothing is assumed.
 | Gate | Result |
 |---|---|
 | Full release build (`RelWithDebInfo`, all five targets, fresh objects) | **EXIT 0, 0 warnings** — including forced recompiles of the noisy TUs; the only two GCC-14 false-positive families (variant inlining in config.cpp to_json, istreambuf_iterator in toolbox.cpp) are scope-suppressed IN FILE with the reason, never globally |
-| C++ suite (`build/hyprnova-tests`) | **248/248 passed, 0 failed, 0 skipped** (includes the `sameid:` BUG #1 regression cases) |
+| C++ suite (`build/hyprnova-tests`) | **258/258 passed, 0 failed, 0 skipped** (includes the `sameid:` BUG #1 cases and the external-findings regressions below) |
+| External findings triage (test batch 1) | **ALL 5 FIXED**, each with regression cases: ① YaraLite nocase missed mixed-case (folded-pass scan) ② `wide` UTF-16LE hits not routed to their rule (id kept + validator accepts the wide form) ③ carver stale offsets after truncation (span guard + clamp, no underflow) ④ shred overwrite symlink race (O_NOFOLLOW + plan-time inode revalidation; swap refused) ⑤ snapshot limits not enforced in the copy loop (in-loop room check; truncated copies reported) |
 | Daemon self-test (`hyprnovad --self-test`) | **58/58** |
 | Runner (`tests/run_tests.sh`, 6 sections) | **ALL RUN SECTIONS PASSED** (build, suite, self-test, bench smoke, env-gated honesty, QML loader: 0 errors) |
 | Spec §8 ransomware drill | **Automated + passing** (`tests/test_response_e2e.cpp`): systemupdate trips live monitor channels; photo-backup control silent; suspend-not-kill / reversible / dry-run-refuses all pinned |

@@ -3,11 +3,14 @@
 // extraction + signature scan of carved artifacts. Synthetic bytes only.
 #include "test_main.hpp"
 
+#include <filesystem>
 #include <fstream>
 
 #include "core/config.hpp"
 #include "scanning/carver.hpp"
 #include "scanning/yara_engine.hpp"
+#include "remediation/shadow_copy.hpp"
+#include "remediation/shredder.hpp"
 
 using namespace hyprnova;
 using hyprnova::testing::check;
@@ -159,5 +162,83 @@ struct CarverSuite {
     }
 };
 const CarverSuite carver_suite_instance;
+
+// ---------------------------------------------------------------------------
+// External findings #3–#5 (pre-handoff test batch): stale carve offsets after
+// a file shrinks, the privileged overwrite symlink race, and snapshot limits
+// enforced only before the copy loop. The guards' math is pinned here.
+// ---------------------------------------------------------------------------
+struct ExternalRaceGuards {
+    ExternalRaceGuards() {
+        // #3a: offset past the re-read buffer must refuse, never underflow.
+        {
+            bool ok = true;
+            const auto take = scanning::carve_take(100, 50, 64, ok);
+            check(!ok && take == 0,
+                  "carver: stale span past the re-read buffer is refused, not underflowed (external #3)",
+                  ok ? "guard did not fire" : "ok=false, take=0");
+        }
+        // #3b: span crossing the end clamps to what is actually there.
+        {
+            bool ok = false;
+            const auto take = scanning::carve_take(10, 100, 64, ok);
+            check(ok && take == 54,
+                  "carver: stale span crossing the buffer end clamps to the bytes present",
+                  "take=" + std::to_string(take));
+        }
+
+        // #4: the plan saw a regular file; by execute time the path is a
+        // symlink. The overwrite must neither follow it nor remove it.
+        {
+            namespace fs = std::filesystem;
+            const std::string dir = "/tmp/hn-shred-race";
+            std::error_code ec;
+            fs::remove_all(dir, ec);
+            fs::create_directories(dir, ec);
+            const std::string decoy = dir + "/decoy.bin";
+            const std::string victim = dir + "/victim.txt";
+            { std::ofstream f{decoy, std::ios::binary | std::ios::trunc}; f << "SHRED ME PLEASE"; }
+            { std::ofstream f{victim, std::ios::binary | std::ios::trunc}; f << "PRECIOUS VICTIM CONTENT"; }
+
+            core::AgentConfig cfg = core::default_config();
+            remediation::Shredder sh{cfg};
+            const auto plan = sh.plan({decoy}, remediation::Shredder::Method::Overwrite);
+            const bool planned = plan.ok && plan.items.size() == 1 &&
+                                 plan.items.front().type == "file" && plan.overwrite;
+            // Swap the path to a symlink AFTER planning (the race window).
+            fs::remove(decoy, ec);
+            fs::create_symlink("victim.txt", decoy, ec);
+
+            const auto o = planned ? sh.execute(plan, true) : remediation::Shredder::Outcome{};
+            std::string vbody;
+            core::fsx::read_file(victim, vbody, 1 << 20);
+            const bool guard_fired = !o.errors.empty();
+            check(planned && guard_fired && o.bytes_overwritten == 0 &&
+                      vbody == "PRECIOUS VICTIM CONTENT" && fs::exists(decoy, ec),
+                  "shred: path swapped to a symlink after planning is neither overwritten nor removed (external #4)",
+                  planned ? (guard_fired ? "guard refused the write; victim intact"
+                                         : "RACE GUARD DID NOT FIRE — victim overwritten!")
+                          : "plan preconditions failed");
+            fs::remove_all(dir, ec);
+        }
+
+        // #5a: a source that grew to the per-file cap gets zero further room —
+        // the loop stops instead of reading until EOF past the cap.
+        {
+            check(remediation::copy_room(64ull << 20, 64ull << 20, 1ull << 30) == 0,
+                  "shadow: copy at the per-file cap takes no further bytes (external #5)",
+                  "room=0 at cap");
+        }
+        // #5b: aggregate budget limits the copy even when the per-file cap
+        // is far away.
+        {
+            const auto room = remediation::copy_room(2, 64ull << 20, 5);
+            check(room == 3,
+                  "shadow: copy room is limited by the remaining aggregate budget",
+                  "room=" + std::to_string(room));
+        }
+    }
+};
+const ExternalRaceGuards external_race_guards_instance;
 
 }  // namespace

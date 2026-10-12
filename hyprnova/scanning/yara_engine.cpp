@@ -51,19 +51,20 @@ std::size_t AhoCorasick::add(std::string_view literal, bool nocase) {
     const std::size_t pattern_id = literal_len_.size();
     literal_len_.push_back(static_cast<std::uint16_t>(std::min<std::size_t>(literal.size(), 65535)));
 
-    // Case-insensitive patterns are inserted in both cases: the automaton has no
-    // per-node flags, and the memory cost is bounded by the rule set, not the data.
+    // Case-insensitive patterns: the automaton sees the ORIGINAL bytes plus a
+    // lowercase variant. The lowercase variant only ever matches in the
+    // case-FOLDED copy of the buffer that scan() runs as a second pass — that
+    // is what catches ARBITRARY mixed-case haystacks. (Indexing only the
+    // lower/upper spellings of the needle used to miss mixed-case data: the
+    // automaton never emitted, so the case-insensitive validator downstream —
+    // however correct — had nothing to validate.)
     std::vector<std::string> variants;
     variants.emplace_back(literal);
     if (nocase) {
         std::string lower{literal};
         std::transform(lower.begin(), lower.end(), lower.begin(),
                        [](unsigned char ch) { return static_cast<char>(std::tolower(ch)); });
-        std::string upper{literal};
-        std::transform(upper.begin(), upper.end(), upper.begin(),
-                       [](unsigned char ch) { return static_cast<char>(std::toupper(ch)); });
         if (lower != variants[0]) variants.push_back(std::move(lower));
-        if (upper != variants[0] && upper != lower) variants.push_back(std::move(upper));
     }
 
     for (const auto& v : variants) {
@@ -602,17 +603,31 @@ void SignatureEngine::rebuild_automaton() noexcept {
     ac_ = AhoCorasick{};
     rule_to_ac_.assign(rules_.size(), {});
 
+    fold_scan_ = false;
+
     for (std::size_t ri = 0; ri < rules_.size(); ++ri) {
         const Rule& r = rules_[ri];
         for (const Pattern& p : r.patterns) {
             if (p.kind == PatternKind::Text && !p.literal.empty()) {
                 rule_to_ac_[ri].push_back(ac_.add(p.literal, p.nocase));
+                if (p.nocase) fold_scan_ = true;
                 if (p.wide) {
-                    // UTF-16LE variant: interleave a NUL after each byte.
+                    // UTF-16LE variants: interleave a NUL after each byte. The
+                    // returned pattern id MUST be kept: it is the only thing
+                    // that routes a UTF-16LE hit back to this rule (dropping
+                    // it made `wide` matches silently unsatisfiable).
                     std::string w;
                     w.reserve(p.literal.size() * 2);
                     for (const char c : p.literal) { w.push_back(c); w.push_back('\0'); }
-                    ac_.add(w, false);
+                    rule_to_ac_[ri].push_back(ac_.add(w, false));
+                    if (p.nocase) {
+                        // Lowercase wide twin: matches the case-folded pass, so
+                        // mixed-case UTF-16LE is found too.
+                        std::string wl{w};
+                        for (std::size_t i = 0; i < wl.size(); i += 2)
+                            wl[i] = static_cast<char>(std::tolower(static_cast<unsigned char>(wl[i])));
+                        if (wl != w) rule_to_ac_[ri].push_back(ac_.add(wl, false));
+                    }
                 }
             } else {
                 // Hex and regex patterns have no single literal to key on, so
@@ -726,17 +741,40 @@ bool SignatureEngine::evaluate_condition(const Rule& r, std::span<const std::byt
         for (std::size_t pi = 0; pi < r.patterns.size(); ++pi) {
             const Pattern& p = r.patterns[pi];
             if (p.kind != PatternKind::Text) continue;
-            if (h.offset + p.literal.size() > data.size()) continue;
-            bool eq = true;
-            for (std::size_t i = 0; i < p.literal.size(); ++i) {
-                const auto a = static_cast<char>(std::to_integer<std::uint8_t>(data[h.offset + i]));
-                const auto b = p.literal[i];
-                if (p.nocase) {
-                    if (std::tolower(static_cast<unsigned char>(a)) !=
-                        std::tolower(static_cast<unsigned char>(b))) { eq = false; break; }
-                } else if (a != b) { eq = false; break; }
+            if (h.offset + p.literal.size() <= data.size()) {
+                bool eq = true;
+                for (std::size_t i = 0; i < p.literal.size(); ++i) {
+                    const auto a = static_cast<char>(std::to_integer<std::uint8_t>(data[h.offset + i]));
+                    const auto b = p.literal[i];
+                    if (p.nocase) {
+                        if (std::tolower(static_cast<unsigned char>(a)) !=
+                            std::tolower(static_cast<unsigned char>(b))) { eq = false; break; }
+                    } else if (a != b) { eq = false; break; }
+                }
+                if (eq) { present[pi] = true; continue; }
             }
-            if (eq) present[pi] = true;
+            if (p.wide) {
+                // A hit may also be the UTF-16LE form (every literal byte
+                // followed by a NUL). The automaton indexes that form, so the
+                // validator must accept it here — otherwise wide hits can never
+                // satisfy the rule (external finding).
+                const std::size_t wbytes = p.literal.size() * 2;
+                if (h.offset + wbytes <= data.size()) {
+                    bool eqw = true;
+                    for (std::size_t i = 0; i < p.literal.size(); ++i) {
+                        const auto a = static_cast<char>(
+                            std::to_integer<std::uint8_t>(data[h.offset + 2 * i]));
+                        const auto hi = std::to_integer<std::uint8_t>(data[h.offset + 2 * i + 1]);
+                        const auto b = p.literal[i];
+                        if (hi != 0) { eqw = false; break; }
+                        if (p.nocase) {
+                            if (std::tolower(static_cast<unsigned char>(a)) !=
+                                std::tolower(static_cast<unsigned char>(b))) { eqw = false; break; }
+                        } else if (a != b) { eqw = false; break; }
+                    }
+                    if (eqw) present[pi] = true;
+                }
+            }
         }
     }
 
@@ -764,7 +802,7 @@ std::vector<Match> SignatureEngine::scan(std::span<const std::byte> data,
 
     // Collect hits per rule so evaluate_condition sees only what it needs.
     std::vector<std::vector<AhoCorasick::Hit>> per_rule(rules_.size());
-    ac_.scan(data, [&](const AhoCorasick::Hit& h) {
+    const auto sink = [&](const AhoCorasick::Hit& h) {
         for (std::size_t ri = 0; ri < rules_.size(); ++ri) {
             const auto& ids = rule_to_ac_[ri];
             for (std::size_t pi = 0; pi < ids.size(); ++pi) {
@@ -774,7 +812,32 @@ std::vector<Match> SignatureEngine::scan(std::span<const std::byte> data,
                 }
             }
         }
-    });
+    };
+    ac_.scan(data, sink);
+    if (fold_scan_) {
+        // Second pass over a case-folded copy: same length, same offsets, so
+        // hits validate byte-for-byte against the ORIGINAL buffer downstream
+        // (the nocase validator folds both sides). This is the pass that finds
+        // mixed-case data for case-insensitive rules.
+        std::string fold;
+        fold.reserve(data.size());
+        for (std::size_t i = 0; i < data.size(); ++i)
+            fold.push_back(static_cast<char>(
+                std::tolower(static_cast<unsigned char>(data[i]))));
+        const auto* fb = reinterpret_cast<const std::byte*>(fold.data());
+        ac_.scan(std::span<const std::byte>(fb, fold.size()), sink);
+    }
+    // Two passes can record the same (pattern, offset) twice; condition
+    // evaluation counts DISTINCT patterns, but keep the hit lists clean.
+    for (auto& v : per_rule) {
+        std::sort(v.begin(), v.end(), [](const AhoCorasick::Hit& a, const AhoCorasick::Hit& b) {
+            return a.offset != b.offset ? a.offset < b.offset : a.pattern < b.pattern;
+        });
+        v.erase(std::unique(v.begin(), v.end(), [](const AhoCorasick::Hit& a, const AhoCorasick::Hit& b) {
+                    return a.offset == b.offset && a.pattern == b.pattern;
+                }),
+                v.end());
+    }
 
     for (std::size_t ri = 0; ri < rules_.size(); ++ri) {
         const Rule& r = rules_[ri];

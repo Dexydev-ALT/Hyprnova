@@ -314,7 +314,8 @@ State dir layout (default `/var/lib/hyprnova`, sandboxed tests use
 
 | Gate | Command | Current result |
 |---|---|---|
-| C++ suite | `./build/hyprnova-tests` (`--json FILE` for machines) | **248/248**, 0 skipped (per-suite: analysis 32, honeypot 29, netpolicy 25, config 18, carver 17, json 17, corpus 15, mem 11, bench 10, quarantine 10, ipcauth 9, e2e 9, sshd 8, response 7, pkg-verify 6, shredder 5, sameid 4, crowdsec 3, proc 3, fs 2, kvrt 2, clamav 1, rkhunter 1) |
+| C++ suite | `./build/hyprnova-tests` (`--json FILE` for machines) | **258/258**, 0 skipped (per-suite: analysis 32, honeypot 29, netpolicy 25, config 18, carver 19, json 17, corpus 15, sig 5, mem 11, bench 10, quarantine 10, ipcauth 9, e2e 9, sshd 8, response 7, pkg-verify 6, shredder 5, sameid 4, crowdsec 3, proc 3, shadow 2, fs 2, kvrt 2, clamav 1, rkhunter 1) |
+| External findings (test batch 1) | regressions in suite | **ALL 5 FIXED**: ① YaraLite nocase missed mixed-case → case-folded second scan pass ② `wide` UTF-16LE hits dropped → pattern id kept + validator accepts the wide form ③ carver stale offsets after a file shrinks → span guard/clamp (no underflow) ④ shred overwrite symlink race → O_NOFOLLOW + plan-time inode revalidation ⑤ snapshot limits unenforced in the copy loop → in-loop room check, truncated copies reported |
 | Daemon self-test | `./build/hyprnovad --self-test` | **58 checks passed**, 1 env SKIP |
 | Runner (6 sections) | `tests/run_tests.sh` (`--json`) | **ALL RUN SECTIONS PASSED**; honest NOT RUN lines for env-gated drills |
 | Kernel drill (real nftables, unprivileged) | recipe TESTING_GUIDE §6 (user+mount+net ns, TEST-NET on lo, nft wrapper) | **KERNEL-DRILL PASS** (~19 s; 3=skip, 1=fail) |
@@ -363,7 +364,31 @@ impossible items stay NOT RUN with named unlocks (VM-BRINGUP.md).
 7. VT/CrowdSec live rounds — need network + API keys → operator keys.
 8. Rescue ISO boot — needs a real machine/VM BIOS.
 
-### 10.3 Operational notes & observed items
+### 10.3 Externally reported findings (test batch 1) — ALL FIXED with regressions
+1. YaraLite `nocase` missed mixed-case strings (automaton indexed only the
+   original/lower/upper needle spellings) → `scan()` now also runs a second
+   pass over a case-folded copy of the buffer (same offsets), the automaton
+   indexes the lowercase variant, and the lower/upper-only variants were
+   removed. `sig:` cases.
+2. YaraLite `wide` matches were never routed to their rule (the UTF-16LE
+   pattern id was discarded) → the id is kept in `rule_to_ac_`, the evaluator
+   accepts the interleaved NUL form (case-folded for wide+nocase), and a
+   lowercase wide twin feeds the folded pass. `sig:` cases.
+3. Carver could use stale offsets after a file shrank between inventory and
+   carve (underflow → out-of-bounds read) → `carve_take()` guard: offsets past
+   the re-read buffer are refused, crossing spans clamped, both noted honestly.
+   Carving stays opt-in. `carver:` cases.
+4. Privileged overwrite shredding had a symlink/path race (opened by pathname,
+   no O_NOFOLLOW, no identity check) → plan captures dev+ino; execute opens
+   `O_NOFOLLOW`, revalidates identity, and on ANY mismatch refuses BOTH the
+   overwrite and the removal with an explicit error. Deterministic swap-race
+   regression (victim file proven intact). `shred:` case.
+5. Snapshot byte limits (64 MiB/file, aggregate budget) were checked only
+   before the copy loop; a file that grew mid-copy overshot them → in-loop
+   `copy_room()` check stops at the cap, the truncated copy is recorded with
+   an honest note, and aggregate accounting stays exact. `shadow:` cases.
+
+### 10.4 Operational notes & observed items
 1. **IPC group membership is cached** per-uid for the daemon's lifetime —
    group changes need a restart.
 2. Absent operator group degrades honestly (root + same-uid only), never fails.

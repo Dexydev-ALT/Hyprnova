@@ -2,7 +2,7 @@
 
 ## 0. Handoff: what professional testers should know first
 
-Current gate at handoff (all reproducible with the commands below): **248/248 C++
+Current gate at handoff (all reproducible with the commands below): **258/258 C++
 cases · self-test 58/58 · zero-warning release build · KERNEL-DRILL PASS (real
 kernel, namespaced) · QML 33 objects, 0 errors · runner 6/6 sections passed ·
 ASan clean (suite + full live daemon cycle) · live IPC smoke of every CLI verb,
@@ -80,7 +80,7 @@ cmake --build /tmp/hn-asan -j1 --target hyprnova-tests hyprnovad
 ASAN_OPTIONS=detect_leaks=1 /tmp/hn-asan/hyprnova-tests
 ```
 
-Expect `=== 248 case(s): 248 passed ...` and no ASan reports. `-O0` is deliberate:
+Expect `=== 258 case(s): 258 passed ...` and no ASan reports. `-O0` is deliberate:
 at `-O1 -g` the ASan compile of `gui/gui_bridge.cpp` needs more RAM than a
 constrained box (or CI container) usually has and cc1plus gets OOM-killed; the
 check's value does not depend on optimisation level. Verified at handoff: suite

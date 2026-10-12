@@ -6,7 +6,12 @@
 #include "core/fd.hpp"
 #include "core/log.hpp"
 
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
 #include <algorithm>
+#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <system_error>
@@ -103,6 +108,11 @@ Shredder::Plan Shredder::plan(const std::vector<std::string>& paths,
             it.path = raw;
             it.type = "file";
             it.bytes = static_cast<std::uint64_t>(fs::file_size(target, ec));
+            struct stat pst {};
+            if (::stat(raw.c_str(), &pst) == 0) {
+                it.dev = static_cast<std::uint64_t>(pst.st_dev);
+                it.ino = static_cast<std::uint64_t>(pst.st_ino);
+            }
             p.items.push_back(std::move(it));
             ++p.files;
             p.total_bytes += p.items.back().bytes;
@@ -188,27 +198,55 @@ Shredder::Outcome Shredder::execute(const Plan& plan, bool confirmed) const noex
         const auto& item = *pitem;
         const fs::path p{item.path};
         if (item.type == "file") {
-            // Best-effort overwrite pass when requested.
+            // Best-effort overwrite pass when requested. The plan's checks ran
+            // earlier; the path may have been swapped since. Open WITHOUT
+            // following symlinks and only zero the very inode we planned on —
+            // a race here would have made the privileged overwrite follow an
+            // attacker-swapped symlink and corrupt an unrelated target
+            // (external finding).
+            bool identity_ok = !plan.overwrite;  // plain unlink cannot follow a swap
             if (plan.overwrite) {
-                std::error_code sec;
-                const auto size = fs::file_size(p, sec);
-                if (!sec && size > 0) {
-                    std::ofstream f{p, std::ios::binary | std::ios::in | std::ios::out};
-                    if (f) {
+                const int fd = ::open(p.c_str(), O_WRONLY | O_CLOEXEC | O_NOFOLLOW);
+                if (fd < 0) {
+                    o.errors.push_back(std::format(
+                        "{}: overwrite skipped (open without following failed: {}); "
+                        "path changed since planning",
+                        item.path, std::strerror(errno)));
+                } else {
+                    core::UniqueFd ffd{fd};
+                    struct stat st {};
+                    if (::fstat(ffd.get(), &st) != 0 || !S_ISREG(st.st_mode) ||
+                        static_cast<std::uint64_t>(st.st_dev) != item.dev ||
+                        static_cast<std::uint64_t>(st.st_ino) != item.ino) {
+                        o.errors.push_back(std::format(
+                            "{}: overwrite skipped (path changed identity since planning; "
+                            "race guard refused to write or remove)", item.path));
+                    } else if (st.st_size > 0) {
+                        identity_ok = true;
                         static std::array<char, 64 * 1024> zero{};
-                        std::uint64_t left = size;
+                        std::uint64_t left = static_cast<std::uint64_t>(st.st_size);
                         while (left > 0) {
                             const auto chunk = std::min<std::uint64_t>(left, zero.size());
-                            f.write(zero.data(), static_cast<std::streamsize>(chunk));
-                            if (!f) break;
-                            left -= chunk;
+                            const ssize_t w = ::write(ffd.get(), zero.data(), chunk);
+                            if (w < 0) {
+                                if (errno == EINTR) continue;
+                                o.errors.push_back(std::format("{}: overwrite failed (write: {})",
+                                                               item.path, std::strerror(errno)));
+                                break;
+                            }
+                            left -= static_cast<std::uint64_t>(w);
                         }
-                        f.flush();
-                        o.bytes_overwritten += size - left;
+                        o.bytes_overwritten +=
+                            static_cast<std::uint64_t>(st.st_size) - left;
                     } else {
-                        o.errors.push_back(std::format("{}: overwrite failed (open)", item.path));
+                        identity_ok = true;  // empty file: nothing to overwrite
                     }
                 }
+            }
+            if (!identity_ok) {
+                // The path no longer refers to the inode the operator planned
+                // to shred: removing it would delete something unplanned.
+                continue;
             }
             if (fs::remove(p, ec)) {
                 ++o.files_removed;

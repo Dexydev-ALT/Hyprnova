@@ -8,6 +8,9 @@
 //   * no EICAR fixture exists — EICAR is never the detection test.
 #include "test_main.hpp"
 
+#include <filesystem>
+#include <fstream>
+
 #include <cstdio>
 
 #include "core/config.hpp"
@@ -92,5 +95,104 @@ struct Corpus {
     }
 };
 const Corpus corpus_instance;
+
+}  // namespace
+
+namespace {
+
+// ---------------------------------------------------------------------------
+// External findings #1 + #2 (pre-handoff test batch): YaraLite nocase missed
+// mixed-case haystacks (the automaton only indexed lower/upper needle
+// spellings), and `wide` UTF-16LE hits were never routed back to their rule
+// (the pattern id was dropped). Both must match, attributed to the right rule.
+// ---------------------------------------------------------------------------
+struct ExternalSigFinds {
+    ExternalSigFinds() {
+        const std::string dir = "/tmp/hn-extsig";
+        std::error_code ec;
+        std::filesystem::create_directories(dir, ec);
+        const std::string rule_path = dir + "/ext.yar";
+        {
+            std::ofstream rf{rule_path, std::ios::binary | std::ios::trunc};
+            rf << "rule ext_nocase_mixed {\n"
+               << "  meta: severity = \"high\"\n"
+               << "  strings: $a = \"malicious.payload\" nocase\n"
+               << "  condition: any of them\n}\n"
+               << "rule ext_wide_u16 {\n"
+               << "  strings: $w = \"widebait\" wide\n"
+               << "  condition: any of them\n}\n"
+               << "rule ext_wide_nocase {\n"
+               << "  strings: $wn = \"MixedBait\" wide nocase\n"
+               << "  condition: any of them\n}\n";
+        }
+        const bool written = core::fsx::is_file(rule_path);
+        check(written, "sig: external-findings rule file written");
+        if (!written) return;
+
+        core::AgentConfig cfg = core::default_config();
+        cfg.scan.rule_files = {rule_path};
+        scanning::SignatureEngine engine;
+        std::size_t rules = 0;
+        {
+            std::vector<scanning::ParseIssue> issues;
+            rules = engine.load(cfg.scan, &issues);
+            check(rules >= 3, "sig: external-findings rules load",
+                  std::to_string(rules) + " rules");
+        }
+        const auto has_rule = [](const std::vector<scanning::Match>& ms,
+                                 std::string_view name) {
+            for (const auto& m : ms)
+                if (m.rule == name) return true;
+            return false;
+        };
+        const auto span_of = [](const std::string& s) {
+            return std::span<const std::byte>(
+                reinterpret_cast<const std::byte*>(s.data()), s.size());
+        };
+
+        {
+            // Mixed case in the HAYSTACK: neither the original, nor the
+            // all-lower, nor the all-upper needle spelling matches this
+            // byte-for-byte — only the case-folded pass can.
+            const std::string body = "prefix MaLiCiOuS.pAyLoAd suffix";
+            const auto ms = engine.scan(span_of(body), "mem");
+            check(has_rule(ms, "ext_nocase_mixed"),
+                  "sig: nocase literal matches a MIXED-CASE buffer (external #1)",
+                  has_rule(ms, "ext_nocase_mixed") ? "matched"
+                                                   : "MISSED — fold pass broken");
+        }
+        {
+            std::string narrow{"widebait"};
+            std::string body;
+            for (const char c : narrow) { body.push_back(c); body.push_back('\0'); }
+            const auto ms = engine.scan(span_of(body), "mem");
+            check(has_rule(ms, "ext_wide_u16"),
+                  "sig: UTF-16LE wide hit is routed to its own rule (external #2)",
+                  has_rule(ms, "ext_wide_u16") ? "matched"
+                                               : "MISSED — wide pattern id dropped");
+        }
+        {
+            std::string narrow{"MixedBait"};
+            std::string body;
+            for (const char c : narrow) {
+                body.push_back(static_cast<char>(
+                    std::tolower(static_cast<unsigned char>(c))));
+                body.push_back('\0');
+            }
+            // Source is "MiXeDbAiT" in UTF-16LE; fold the byte, keep the NUL.
+            body.clear();
+            for (const char c : std::string("MiXeDbAiT")) {
+                body.push_back(static_cast<char>(
+                    std::tolower(static_cast<unsigned char>(c))));
+                body.push_back('\0');
+            }
+            const auto ms = engine.scan(span_of(body), "mem");
+            check(has_rule(ms, "ext_wide_nocase"),
+                  "sig: wide+nocase matches mixed-case UTF-16LE (#1+#2 combined)",
+                  has_rule(ms, "ext_wide_nocase") ? "matched" : "MISSED");
+        }
+    }
+};
+const ExternalSigFinds external_sig_finds_instance;
 
 }  // namespace

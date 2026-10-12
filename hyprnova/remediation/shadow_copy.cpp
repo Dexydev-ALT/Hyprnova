@@ -65,10 +65,13 @@ constexpr const char* kMetaName = "meta.json";
 }
 
 /// Copy one regular file into the snapshot, hashing as we go. Returns false on
-/// any I/O problem; the caller records a skip.
+/// any I/O problem; the caller records a skip. `truncated_out` is set when the
+/// copy stopped at a limit (the source grew past the caps mid-copy); the bytes
+/// actually copied still land in `size_out` so the caller's accounting stays
+/// exact.
 [[nodiscard]] bool copy_file_hashed(const fs::path& src, const fs::path& dst,
                                     const std::uint64_t budget, std::string& sha_out,
-                                    std::uint64_t& size_out) noexcept {
+                                    std::uint64_t& size_out, bool& truncated_out) noexcept {
     try {
         std::error_code ec;
         const auto sz = fs::file_size(src, ec);
@@ -90,7 +93,13 @@ constexpr const char* kMetaName = "meta.json";
         std::string buf(1 << 16, '\0');
         std::uint64_t total = 0;
         for (;;) {
-            const ssize_t n = ::read(in_fd.get(), buf.data(), buf.size());
+            const std::uint64_t room = copy_room(total, kMaxFileBytes, budget);
+            if (room == 0) {
+                truncated_out = total > 0;
+                break;
+            }
+            const ssize_t n = ::read(in_fd.get(), buf.data(),
+                                     static_cast<std::size_t>(std::min<std::uint64_t>(buf.size(), room)));
             if (n < 0) {
                 if (errno == EINTR) continue;
                 return false;
@@ -278,11 +287,14 @@ std::string ShadowCopyEngine::take(std::string_view reason, std::string& detail)
                     }
                     std::string sha;
                     std::uint64_t sz = 0;
+                    bool truncated = false;
                     const fs::path dst = dst_root / rel;
-                    if (!copy_file_hashed(p, dst, cfg_.shadow.max_snapshot_bytes - total_bytes, sha, sz)) {
+                    if (!copy_file_hashed(p, dst, cfg_.shadow.max_snapshot_bytes - total_bytes,
+                                          sha, sz, truncated)) {
                         ++skipped;
                         continue;
                     }
+                    if (truncated) ++skipped;  // counted as a limit-skip too (honest totals)
                     Object fo;
                     fo["path"] = p.generic_string();
                     fo["rel"] = rel;
@@ -290,6 +302,12 @@ std::string ShadowCopyEngine::take(std::string_view reason, std::string& detail)
                     fo["kind"] = std::string{"file"};
                     fo["sha256"] = sha;
                     fo["size"] = static_cast<std::int64_t>(sz);
+                    if (truncated) {
+                        fo["truncated"] = 1;
+                        fo["note"] = std::string(
+                            "source grew past the per-file/snapshot cap mid-copy; "
+                            "snapshot copy stopped at the cap");
+                    }
                     struct stat st {};
                     if (::stat(p.c_str(), &st) == 0)
                         fo["mode"] = static_cast<std::int64_t>(st.st_mode & 0777);
